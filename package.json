@@ -12,9 +12,7 @@
   },
   "keywords": [
     "telescope",
-    "telnet",
-    "node",
-    "bootstrap"
+    "telnet"
   ],
   "author": "Davide Ricci",
   "license": "ISC",
@@ -23,6 +21,6 @@
   },
   "homepage": "https://github.com/orsa-unige/tcs#readme",
   "dependencies": {
-    "telnet": "0.0.1"
+    "telnet-client": "^1.0.3"
   }
 }
