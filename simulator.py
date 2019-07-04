@@ -1,5 +1,9 @@
-import socket, threading
+#!/usr/bin/python
 
+# Telnet
+import socket, threading, json
+
+# Coordinates
 import astropy.units as u
 from astropy.time import Time
 from astropy.coordinates import SkyCoord, EarthLocation, AltAz, ICRS
@@ -13,25 +17,29 @@ s.listen(1)
 
 lock = threading.Lock()
 
-welcome_message = 'Welcome to MUD\n1. Go west\n2. Open a window\n3. Quit\n'
-
 status={
         'pointing.track': 0,
         'object.solarsystem.object': 0,
         'object.solarsystem.moon': 1,
         'object.horizontal.alt': 45,
         'object.horizontal.az': 90,
-        'object.equatorial.ra': 8.002,
-        'object.equatorial.dec': 21.23,
+        'object.equatorial.ra': 1.045,
+        'object.equatorial.dec': 29.66,
 }
 
+welcome_message = """
+OARPAF telescope simulator
+s for status
+q to quit
+"""
+
 def manage_command(data):
-        
+
         def success():
                 return "command ok\n"
 
         def fail():
-                return "value out of range\n"
+                return "command error\n"
 
         def unknown():
                 return "unknown status command\n"
@@ -40,26 +48,25 @@ def manage_command(data):
                 return str(a)+"\n"
 
         def convert(c1,c2,frame):
-                t = Time(datetime.datetime.now().isoformat(), format='isot', scale='utc') - 2*u.hour
+                t = Time(datetime.datetime.now().isoformat(), format='isot', scale='utc') + 2*u.hour
 
-                if frame=='radec':
-                        c = SkyCoord(ra=c1*u.degree, dec=c2*u.degree, frame='icrs', obstime=t, location=oarpaf)
+                if frame=='altaz':
+                        c = SkyCoord(ra=c1*u.hourangle, dec=c2*u.degree, frame='icrs', obstime=t, location=oarpaf)
                         status['object.horizontal.alt']=c.altaz.alt.deg
                         status['object.horizontal.az']=c.altaz.az.deg
-                elif frame=='altaz':
-                        c = SkyCoord(alt=c1*u.degree, az=c2*u.degree, frame='altaz', obstime=t, location=oarpaf)                        
-                        status['object.equatorial.ra']=c.icrs.ra.deg
+                elif frame=='radec':
+                        c = SkyCoord(alt=c1*u.degree, az=c2*u.degree, frame='altaz', obstime=t, location=oarpaf)
+                        status['object.equatorial.ra']=c.icrs.ra.hourangle
                         status['object.equatorial.dec']=c.icrs.dec.deg
                 else: unknown();
 
-                
         def setter(cmd):
                 if not "=" in cmd:
                         return unknown()
                 else:
                         keyval=cmd.strip().split("=")
                         key=keyval[0].strip()
-                        val=int(keyval[1])
+                        val=float(keyval[1])
 
                 if key in status.keys():
 
@@ -69,47 +76,57 @@ def manage_command(data):
                                         return success();
                                 else: return fail();
 
-                        if key=="object.solarsystem.object":
+                        elif key=="object.solarsystem.object":
                                 if val>=0 and val<=7:
                                         status[key]=val
                                         return success();
                                 else: return fail();
 
-                        if key=="object.solarsystem.moon":
+                        elif key=="object.solarsystem.moon":
                                 if val==0 or val==1:
                                         status[key]=val
                                         return success();
                                 else: return fail();
 
-                        if key=="object.solarsystem.object":
+                        elif key=="object.solarsystem.object":
                                 if val>=0 and val<=7:
                                         status[key]=val
                                         return success();
                                 else: return fail();
 
-                        if key=="object.horizontal.alt":
-                                if val>=10 and val<=90:
-                                        status[key]=val
+                        elif key=="object.horizontal.alt":
+                                az=status["object.horizontal.az"]
+                                if val>=10 and val<=90: 
+                                       status[key]=val
+                                        convert(val,az,"radec")
                                         return success();
                                 else: return fail();
 
-                        if key=="object.horizontal.az":
+                        elif key=="object.horizontal.az":
+                                alt=status["object.horizontal.alt"]
                                 if val>=0 and val<=360:
                                         status[key]=val
+                                        convert(alt,val,"radec")
                                         return success();
                                 else: return fail();
 
-                        if key=="object.equatorial.ra":
+                        elif key=="object.equatorial.ra":
+                                dec=status["object.equatorial.dec"]
                                 if val>=0 and val<=24:
                                         status[key]=val
+                                        convert(val,dec,"altaz")
                                         return success();
                                 else: return fail();
 
-                        if key=="object.horizontal.dec":
+                        elif key=="object.equatorial.dec":
+                                ra=status["object.equatorial.ra"]
                                 if val>=-30 and val<=90:
                                         status[key]=val
+                                        convert(ra,val,"altaz")
                                         return success();
                                 else: return fail();
+
+                        else: return "not managed yet\n",
 
                 else: return unknown();
 
@@ -117,7 +134,6 @@ def manage_command(data):
                 key=cmd.strip()
                 if key in status.keys(): return answer(status[key])
                 else: return unknown()
-
 
         # removing spaces, getting rid of "1", removing spaces and end of line.
         command=data.strip()[1:].strip().replace("\r\n","")
@@ -129,7 +145,7 @@ def manage_command(data):
         elif setorget=="get":
                 return getter(command[4:])
         else:
-                return 'Not set nor get'
+                return 'Not set nor get\n'
 
 
 class daemon(threading.Thread):
@@ -152,10 +168,10 @@ class daemon(threading.Thread):
             # handle menu alterantives and set proper return message
             if data[0] == '1':
                 data = manage_command(data)
-            elif data[0] == '2':
-                data = 'I feel a chilly wind\n'
-            elif data[0] == '3':
+            elif data[0] == 'q':
                 break;
+            elif data[0] == 's':
+                data = json.dumps(status, indent=4, sort_keys=True)+'\n'
             else:
                 data = welcome_message
 
