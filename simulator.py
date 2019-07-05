@@ -137,7 +137,6 @@ def manage_command(data):
                         elif key=="object.equatorial.dec":
                                 ra=status["object.equatorial.ra"]
                                 if val>=-30 and val<=90:
-                                        print(val)
                                         status[key]=val
                                         convert(ra,val,"altaz")
                                         return command_ok();
@@ -182,28 +181,30 @@ def manage_command(data):
 
 class daemon(threading.Thread):
 
-    def __init__(self, (socket,address)):
+    def __init__(self, sa):
+
             threading.Thread.__init__(self)
-            self.socket = socket
-            self.address = address
+            
+            self.socket = sa[0]
+            self.address = sa[1]
 
     def run(self):
 
         # display welcome message
-        self.socket.send(welcome_message)
+        self.socket.sendall(welcome_message)
 
         while(True):
 
             # wait for keypress + enter
             data = self.socket.recv(1024)
-            print('request---------------->'+data+'<-------------\n')
+            #print('request---------------->'+data+'<-------------\n')
 
             if data: 
                     # handle menu alterantives and set proper return message
                     if data[0] == '1':
                             data = manage_command(data)
                     elif data[0] == 'q':
-                        break;
+                            break;
                     elif data[0] == 's':
                             data = json.dumps(status, indent=4, sort_keys=True)+'\n'
                     else:
@@ -212,8 +213,8 @@ class daemon(threading.Thread):
                     data = welcome_message
                     
             # send the designated message back to the client
-            print('answer---------------->'+data+'<-------------\n')
-            self.socket.send(data);
+            #print('answer---------------->'+data+'<-------------\n')
+            self.socket.sendall(data);
 
 
             
