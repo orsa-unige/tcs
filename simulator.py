@@ -9,7 +9,7 @@ from astropy.time import Time
 from astropy.coordinates import SkyCoord, EarthLocation, AltAz, ICRS
 import datetime
 
-oarpaf = EarthLocation(lat=44.591307*u.deg, lon=9.203467*u.deg, height=1460*u.m)
+oarpaf = EarthLocation(lat=44.5911*u.deg, lon=9.2035*u.deg, height=1487*u.m)
 
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 s.bind(('', 65432))
@@ -18,6 +18,8 @@ s.listen(1)
 lock = threading.Lock()
 
 status={
+        'pointing.target.ra': 1.045,
+        'pointing.target.dec': 29.66,
         'pointing.track': 0,
         'object.solarsystem.object': 0,
         'object.solarsystem.moon': 1,
@@ -35,20 +37,28 @@ q to quit
 
 def manage_command(data):
 
-        def success():
-                return "command ok\n"
+        def command_ok():
+                ret="1 COMMAND OK\n"
+                ret+=command_complete()
+                return ret
+
+        def data_inline(key,val):
+                ret=command_ok()
+                ret+="1 DATA INLINE "+str(key).upper()+"="+str(val)+"\n"
+                ret+=command_complete()
+                return ret
+
+        def command_complete():
+                return "1 COMMAND COMPLETE\n"
 
         def fail():
-                return "command error\n"
+                return "1 COMMAND ERROR\n"
 
         def unknown():
-                return "unknown status command\n"
-
-        def answer(a):
-                return str(a)+"\n"
+                return "1 UNKNOWN STATUS COMMAND\n"
 
         def convert(c1,c2,frame):
-                t = Time(datetime.datetime.now().isoformat(), format='isot', scale='utc') + 2*u.hour
+                t = Time(datetime.datetime.now().isoformat(), format='isot')  - 2*u.hour
 
                 if frame=='altaz':
                         c = SkyCoord(ra=c1*u.hourangle, dec=c2*u.degree, frame='icrs', obstime=t, location=oarpaf)
@@ -61,45 +71,49 @@ def manage_command(data):
                 else: unknown();
 
         def setter(cmd):
-                if not "=" in cmd:
-                        return unknown()
-                else:
+                if "=" in cmd:
                         keyval=cmd.strip().split("=")
-                        key=keyval[0].strip()
-                        val=float(keyval[1])
+                        key=keyval[0]
+                        val=keyval[1]
+                        key.strip() if key else unknown()
+                        float(val) if val else unknown()
+                else:
+                        return unknown()
 
                 if key in status.keys():
 
                         if key=="pointing.track":
+                                #ra=status["pointing.target.ra"]
+                                #dec=status["pointing.target.dec"]
                                 if val==0 or val==1 or val==2:
                                         status[key]=val
-                                        return success();
+                                        return command_ok();
                                 else: return fail();
 
                         elif key=="object.solarsystem.object":
                                 if val>=0 and val<=7:
                                         status[key]=val
-                                        return success();
+                                        return command_ok();
                                 else: return fail();
 
                         elif key=="object.solarsystem.moon":
                                 if val==0 or val==1:
                                         status[key]=val
-                                        return success();
+                                        return command_ok();
                                 else: return fail();
 
                         elif key=="object.solarsystem.object":
                                 if val>=0 and val<=7:
                                         status[key]=val
-                                        return success();
+                                        return command_ok();
                                 else: return fail();
 
                         elif key=="object.horizontal.alt":
                                 az=status["object.horizontal.az"]
-                                if val>=10 and val<=90: 
-                                       status[key]=val
+                                if val>=10 and val<=90:
+                                        status[key]=val
                                         convert(val,az,"radec")
-                                        return success();
+                                        return command_ok();
                                 else: return fail();
 
                         elif key=="object.horizontal.az":
@@ -107,7 +121,7 @@ def manage_command(data):
                                 if val>=0 and val<=360:
                                         status[key]=val
                                         convert(alt,val,"radec")
-                                        return success();
+                                        return command_ok();
                                 else: return fail();
 
                         elif key=="object.equatorial.ra":
@@ -115,7 +129,7 @@ def manage_command(data):
                                 if val>=0 and val<=24:
                                         status[key]=val
                                         convert(val,dec,"altaz")
-                                        return success();
+                                        return command_ok();
                                 else: return fail();
 
                         elif key=="object.equatorial.dec":
@@ -123,7 +137,19 @@ def manage_command(data):
                                 if val>=-30 and val<=90:
                                         status[key]=val
                                         convert(ra,val,"altaz")
-                                        return success();
+                                        return command_ok();
+                                else: return fail();
+
+                        elif key=="pointing.target.ra":
+                                if val>=0 and val<=24:
+                                        status[key]=val
+                                        return command_ok();
+                                else: return fail();
+
+                        elif key=="pointing.target.dec":
+                                if val>=-30 and val<=90:
+                                        status[key]=val
+                                        return command_ok();
                                 else: return fail();
 
                         else: return "not managed yet\n",
@@ -132,8 +158,11 @@ def manage_command(data):
 
         def getter(cmd):
                 key=cmd.strip()
-                if key in status.keys(): return answer(status[key])
-                else: return unknown()
+                if key in status.keys():
+                        val=status[key]
+                        return data_inline(key,val)
+                else:
+                        return unknown()
 
         # removing spaces, getting rid of "1", removing spaces and end of line.
         command=data.strip()[1:].strip().replace("\r\n","")
