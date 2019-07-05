@@ -13,10 +13,18 @@ exports = module.exports = {
         var connection = new telnet();
 
         connection.connect(params).then(function() {
+
+            // first time
             connection.send(cmd).then(function(res) {
                 console.log(res);
-                //connection.end();
             });
+
+            // second time
+            connection.send(cmd).then(function(res) {
+                console.log(res);
+            });
+
+
         });
 
     } /// send_command

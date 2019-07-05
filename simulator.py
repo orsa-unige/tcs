@@ -16,7 +16,7 @@ s.bind(('', 65432))
 s.listen(1)
 
 lock = threading.Lock()
-
+        
 status={
         'pointing.target.ra': 1.045,
         'pointing.target.dec': 29.66,
@@ -78,10 +78,12 @@ def manage_command(data):
                         else:
                                 try: val=float(val)
                                 except: unknown()
-                        
+
                 else:
                         return unknown()
 
+
+                
                 if key in status.keys():
 
                         if key=="pointing.track":
@@ -184,7 +186,7 @@ class daemon(threading.Thread):
     def __init__(self, sa):
 
             threading.Thread.__init__(self)
-            
+
             self.socket = sa[0]
             self.address = sa[1]
 
@@ -199,7 +201,7 @@ class daemon(threading.Thread):
             data = self.socket.recv(1024)
             #print('request---------------->'+data+'<-------------\n')
 
-            if data: 
+            if data:
                     # handle menu alterantives and set proper return message
                     if data[0] == '1':
                             data = manage_command(data)
@@ -211,13 +213,13 @@ class daemon(threading.Thread):
                             data = welcome_message
             else:
                     data = welcome_message
-                    
+
             # send the designated message back to the client
             #print('answer---------------->'+data+'<-------------\n')
             self.socket.sendall(data);
 
 
-            
+
         # close connection
         self.socket.close()
 
