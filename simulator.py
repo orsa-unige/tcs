@@ -39,7 +39,6 @@ def manage_command(data):
 
         def command_ok():
                 ret="1 COMMAND OK\n"
-                ret+=command_complete()
                 return ret
 
         def data_inline(key,val):
@@ -73,10 +72,13 @@ def manage_command(data):
         def setter(cmd):
                 if "=" in cmd:
                         keyval=cmd.strip().split("=")
-                        key=keyval[0]
-                        val=keyval[1]
-                        key.strip() if key else unknown()
-                        float(val) if val else unknown()
+                        key=keyval[0].strip()
+                        val=keyval[1].strip()
+                        if not key : unknown()
+                        else:
+                                try: val=float(val)
+                                except: unknown()
+                        
                 else:
                         return unknown()
 
@@ -135,6 +137,7 @@ def manage_command(data):
                         elif key=="object.equatorial.dec":
                                 ra=status["object.equatorial.ra"]
                                 if val>=-30 and val<=90:
+                                        print(val)
                                         status[key]=val
                                         convert(ra,val,"altaz")
                                         return command_ok();
@@ -180,9 +183,9 @@ def manage_command(data):
 class daemon(threading.Thread):
 
     def __init__(self, (socket,address)):
-        threading.Thread.__init__(self)
-        self.socket = socket
-        self.address = address
+            threading.Thread.__init__(self)
+            self.socket = socket
+            self.address = address
 
     def run(self):
 
@@ -193,25 +196,32 @@ class daemon(threading.Thread):
 
             # wait for keypress + enter
             data = self.socket.recv(1024)
+            print('request---------------->'+data+'<-------------\n')
 
-            # handle menu alterantives and set proper return message
-            if data[0] == '1':
-                data = manage_command(data)
-            elif data[0] == 'q':
-                break;
-            elif data[0] == 's':
-                data = json.dumps(status, indent=4, sort_keys=True)+'\n'
+            if data: 
+                    # handle menu alterantives and set proper return message
+                    if data[0] == '1':
+                            data = manage_command(data)
+                    elif data[0] == 'q':
+                        break;
+                    elif data[0] == 's':
+                            data = json.dumps(status, indent=4, sort_keys=True)+'\n'
+                    else:
+                            data = welcome_message
             else:
-                data = welcome_message
-
+                    data = welcome_message
+                    
             # send the designated message back to the client
+            print('answer---------------->'+data+'<-------------\n')
             self.socket.send(data);
 
+
+            
         # close connection
         self.socket.close()
 
 while True:
-    daemon(s.accept()).start()
+        daemon(s.accept()).start()
 
 
 # From:
