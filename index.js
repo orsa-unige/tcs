@@ -8,27 +8,43 @@ var params = {
 };
 
 exports = module.exports = {
-    
+
+    connect: function(){
+        var connection = new telnet();
+
+        connection.connect(params).then(function() {
+            console.log("connected");
+        });
+
+    }, /// connect
+
     send_command: function(cmd) {
         var connection = new telnet();
 
         connection.connect(params).then(function() {
-
-            // first time
             connection.send(cmd).then(function(res) {
                 console.log(res);
+                connection.end().then(function(){
+                    connection.destroy()
+                });
             });
-
-            // second time
-            connection.send(cmd).then(function(res) {
-                console.log(res);
-            });
-
-
         });
 
-    } /// send_command
-                
+    }, /// send_command
+
+    poll_status: function(cmd,time=1000) {
+        var connection = new telnet();
+
+        connection.connect(params).then(function() {
+            setInterval(function(){
+                connection.send(cmd).then(function(res) {
+                    console.log(res);
+                });
+            },time)
+        });
+
+    } /// poll_status
+
 }; /// exports
 
 
