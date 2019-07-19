@@ -5,22 +5,38 @@ var params = {
     port: 65432,
     negotiationMandatory: false,
     sendTimeout: 100
-};
+}
 
 exports = module.exports = {
 
+    connection : new telnet(),
+    interval:'',
+    
     connect: function(){
-        var connection = new telnet();
-
+        var connection = this.connection;
+        
         connection.connect(params).then(function() {
             console.log("connected");
         });
 
     }, /// connect
 
-    send_command: function(cmd) {
-        var connection = new telnet();
+    send: function(cmd) {
+        var connection = this.connection;
+            connection.send(cmd).then(function(res) {
+                console.log(res);
+            });
+    }, /// send
 
+    disconnect: function() {
+        var connection = this.connection;
+                connection.end().then(function(){
+                    connection.destroy()
+                });
+    }, /// disconnect
+
+    send_once: function(cmd) {
+        var connection = new telnet();
         connection.connect(params).then(function() {
             connection.send(cmd).then(function(res) {
                 console.log(res);
@@ -29,22 +45,26 @@ exports = module.exports = {
                 });
             });
         });
+    }, /// send_once
 
-    }, /// send_command
-
-    poll_status: function(cmd,time=1000) {
+    start_poll: function(cmd,time=1000) {
         var connection = new telnet();
-
         connection.connect(params).then(function() {
-            setInterval(function(){
+            clearInterval(this.interval)
+            this.interval = setInterval(function(){
                 connection.send(cmd).then(function(res) {
                     console.log(res);
                 });
             },time)
         });
-
-    } /// poll_status
-
+        
+    }, /// start_poll
+    
+    stop_poll: function() {
+        clearInterval(this.interval)
+        console.log("ciao")
+    }, /// stop_poll
+    
 }; /// exports
 
 
