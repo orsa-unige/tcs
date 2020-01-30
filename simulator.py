@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 
 # Telnet
 import socket, threading, json
@@ -8,6 +8,12 @@ import astropy.units as u
 from astropy.time import Time
 from astropy.coordinates import SkyCoord, EarthLocation, AltAz, ICRS
 import datetime
+
+from astropy.utils import iers
+iers.conf.auto_download = False
+
+print ( "TCS Simulator. Conenct with" )
+print ( "telnet localhost 65432" )
 
 oarpaf = EarthLocation(lat=44.5911*u.deg, lon=9.2035*u.deg, height=1487*u.m)
 
@@ -32,6 +38,7 @@ status={
 welcome_message = """
 OARPAF telescope simulator
 s for status
+h for help
 q to quit
 """
 
@@ -57,8 +64,9 @@ def manage_command(data):
                 return "1 UNKNOWN STATUS COMMAND\n"
 
         def convert(c1,c2,frame):
-                t = Time(datetime.datetime.now().isoformat(), format='isot')  - 2*u.hour
+                t = Time(datetime.datetime.now().isoformat(), format='isot')
 
+                print(t)
                 if frame=='altaz':
                         c = SkyCoord(ra=c1*u.hourangle, dec=c2*u.degree, frame='icrs', obstime=t, location=oarpaf)
                         status['object.horizontal.alt']=c.altaz.alt.deg
@@ -81,8 +89,6 @@ def manage_command(data):
 
                 else:
                         return unknown()
-
-
                 
                 if key in status.keys():
 
@@ -193,12 +199,12 @@ class daemon(threading.Thread):
     def run(self):
 
         # display welcome message
-        self.socket.sendall(welcome_message)
+        self.socket.sendall(welcome_message.encode())
 
         while(True):
 
             # wait for keypress + enter
-            data = self.socket.recv(1024)
+            data = (self.socket.recv(1024)).decode()
             #print('request---------------->'+data+'<-------------\n')
 
             if data:
@@ -209,6 +215,14 @@ class daemon(threading.Thread):
                             break;
                     elif data[0] == 's':
                             data = json.dumps(status, indent=4, sort_keys=True)+'\n'
+                    elif data[0] == 'h':
+                            data = """Command examples for copy&paste (NO LEADING SPACES!):
+                            1 get object.equatorial.dec
+                            1 get object.horizontal.alt
+                            1 set object.equatorial.dec=10
+                            1 set object.horizontal.alt=20
+                            \n"""                            
+                            
                     else:
                             data = welcome_message
             else:
@@ -216,7 +230,7 @@ class daemon(threading.Thread):
 
             # send the designated message back to the client
             #print('answer---------------->'+data+'<-------------\n')
-            self.socket.sendall(data);
+            self.socket.sendall(data.encode());
 
 
 
@@ -227,5 +241,6 @@ while True:
         daemon(s.accept()).start()
 
 
+        
 # From:
 # https://grocid.net/2012/06/14/a-very-simple-server-telnet-example/
