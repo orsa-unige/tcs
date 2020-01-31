@@ -64,7 +64,7 @@ def manage_command(data):
                 return "1 UNKNOWN STATUS COMMAND\n"
 
         def convert(c1,c2,frame):
-                t = Time(datetime.datetime.now().isoformat(), format='isot')
+                t = Time(datetime.datetime.utcnow().isoformat(), format='isot')
 
                 print(t)
                 if frame=='altaz':
