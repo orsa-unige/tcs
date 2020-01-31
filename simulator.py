@@ -22,7 +22,7 @@ s.bind(('', 65432))
 s.listen(1)
 
 lock = threading.Lock()
-        
+
 status={
         'pointing.target.ra': 1.045,
         'pointing.target.dec': 29.66,
@@ -89,7 +89,7 @@ def manage_command(data):
 
                 else:
                         return unknown()
-                
+
                 if key in status.keys():
 
                         if key=="pointing.track":
@@ -221,8 +221,8 @@ class daemon(threading.Thread):
                             1 get object.horizontal.alt
                             1 set object.equatorial.dec=10
                             1 set object.horizontal.alt=20
-                            \n"""                            
-                            
+                            \n"""
+
                     else:
                             data = welcome_message
             else:
@@ -230,9 +230,12 @@ class daemon(threading.Thread):
 
             # send the designated message back to the client
             #print('answer---------------->'+data+'<-------------\n')
-            self.socket.sendall(data.encode());
-
-
+            try:
+                    self.socket.sendall(data.encode());
+                    
+            except socket.error as e:
+                    print(e)
+                    break;
 
         # close connection
         self.socket.close()
@@ -241,6 +244,6 @@ while True:
         daemon(s.accept()).start()
 
 
-        
+
 # From:
 # https://grocid.net/2012/06/14/a-very-simple-server-telnet-example/
