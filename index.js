@@ -11,60 +11,69 @@ exports = module.exports = {
 
     connection : new telnet(),
     interval:'',
-    
+
     connect: function(){
         var connection = this.connection;
-        
-        connection.connect(params).then(function() {
-            console.log("connected");
-        });
-
+        connection.connect(params)
+            .then((res) => {
+                console.log('result: ', res);
+            })
+            .catch((err) =>
+                   console.log('error: ', err));
     }, /// connect
 
     send: function(cmd) {
         var connection = this.connection;
-            connection.send(cmd).then(function(res) {
-                console.log(res);
-            });
+        connection.send(cmd)
+            .then((res) =>
+                  console.log(res))
+            .catch((err) =>
+                   console.log('error: ', err));
     }, /// send
 
     disconnect: function() {
         var connection = this.connection;
-                connection.end().then(function(){
-                    connection.destroy()
-                });
+        connection.end()
+            .then((res) =>
+                  connection.destroy())
+            .catch((err) =>
+                   console.log('error: ', err));
     }, /// disconnect
 
-    send_once: function(cmd) {
-        var connection = new telnet();
-        connection.connect(params).then(function() {
-            connection.send(cmd).then(function(res) {
-                console.log(res);
-                connection.end().then(function(){
-                    connection.destroy()
-                });
-            });
-        });
-    }, /// send_once
-
     start_poll: function(cmd,time=1000) {
-        var connection = new telnet();
-        connection.connect(params).then(function() {
-            clearInterval(this.interval)
-            this.interval = setInterval(function(){
-                connection.send(cmd).then(function(res) {
-                    console.log(res);
-                });
-            },time)
-        });
-        
+        var connection = this.connection;
+        this.interval = setInterval(function(){
+            connection.send(cmd)
+            .then((res) =>
+                  console.log(res))
+            .catch((err) =>
+                   console.log('error: ', err));
+        },time);
     }, /// start_poll
     
     stop_poll: function() {
-        clearInterval(this.interval)
-        console.log("ciao")
+        clearInterval(this.interval);
     }, /// stop_poll
-    
+
+    send_once: function(cmd) {
+        //var connection = this.connection;
+        var connection = new telnet();
+        connection.connect(params)
+            .then(() =>
+                  connection.send(cmd)
+                  .then((res) => {
+                      console.log(res);
+                      connection.end()
+                          .then((res) =>
+                                connection.destroy())
+                          .catch((err) =>
+                                 console.log('error: ', err));
+                  })
+                  .catch((err) =>
+                         console.log('error: ', err)))
+            .catch((err) => console.log('error: ', err));
+    }, /// send_once
+
 }; /// exports
 
 
