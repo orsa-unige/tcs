@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 
 # Telnet
 import socket, threading, json
@@ -6,16 +7,15 @@ import socket, threading, json
 # Coordinates
 import astropy.units as u
 from astropy.time import Time
-from astropy.coordinates import SkyCoord, EarthLocation, AltAz, ICRS
-import datetime
+from astropy.coordinates import SkyCoord, EarthLocation
 
-from astropy.utils import iers
-iers.conf.auto_download = False
+# from astropy.utils import iers
+# iers.conf.auto_download = False
 
 print ( "TCS Simulator. Conenct with" )
 print ( "telnet localhost 65432" )
 
-oarpaf = EarthLocation(lat=44.5911*u.deg, lon=9.2035*u.deg, height=1487*u.m)
+oarpaf = EarthLocation(lat=44.5911, lon=9.2034, height=1480)
 
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 s.bind(('', 65432))
@@ -64,15 +64,15 @@ def manage_command(data):
                 return "1 UNKNOWN STATUS COMMAND\n"
 
         def convert(c1,c2,frame):
-                t = Time(datetime.datetime.utcnow().isoformat(), format='isot')
-
-                print(t)
+                time = Time.now() #(datetime.datetime.utcnow().isoformat(), format='isot')
+                print(time.isot)
+                
                 if frame=='altaz':
-                        c = SkyCoord(ra=c1*u.hourangle, dec=c2*u.degree, frame='icrs', obstime=t, location=oarpaf)
+                        c = SkyCoord(ra=c1*u.hourangle, dec=c2*u.degree, frame='fk5', obstime=time, location=oarpaf)
                         status['object.horizontal.alt']=c.altaz.alt.deg
                         status['object.horizontal.az']=c.altaz.az.deg
                 elif frame=='radec':
-                        c = SkyCoord(alt=c1*u.degree, az=c2*u.degree, frame='altaz', obstime=t, location=oarpaf)
+                        c = SkyCoord(alt=c1*u.degree, az=c2*u.degree, frame='altaz', obstime=time, location=oarpaf)
                         status['object.equatorial.ra']=c.icrs.ra.hourangle
                         status['object.equatorial.dec']=c.icrs.dec.deg
                 else: unknown();
@@ -93,8 +93,6 @@ def manage_command(data):
                 if key in status.keys():
 
                         if key=="pointing.track":
-                                #ra=status["pointing.target.ra"]
-                                #dec=status["pointing.target.dec"]
                                 if val==0 or val==1 or val==2:
                                         status[key]=val
                                         return command_ok();
@@ -242,7 +240,6 @@ class daemon(threading.Thread):
 
 while True:
         daemon(s.accept()).start()
-
 
 
 # From:
