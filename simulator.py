@@ -33,6 +33,12 @@ status={
         'object.horizontal.az': 90,
         'object.equatorial.ra': 1.045,
         'object.equatorial.dec': 29.66,
+        'gps.status' : 2,
+        'gps.time' : Time.now().unix,
+        'gps.latitude' : oarpaf.lat.deg,
+        'gps.longitude' : oarpaf.lon.deg,
+        'gps.height' : oarpaf.height.value,
+        
 }
 
 welcome_message = """
@@ -64,9 +70,6 @@ def manage_command(data):
                 return "1 UNKNOWN STATUS COMMAND\n"
 
         def convert(c1,c2,frame):
-                time = Time.now() #(datetime.datetime.utcnow().isoformat(), format='isot')
-                print(time.isot)
-                
                 if frame=='altaz':
                         c = SkyCoord(ra=c1*u.hourangle, dec=c2*u.degree, frame='fk5', obstime=time, location=oarpaf)
                         status['object.horizontal.alt']=c.altaz.alt.deg
@@ -172,10 +175,14 @@ def manage_command(data):
                 else:
                         return unknown()
 
+
         # removing spaces, getting rid of "1", removing spaces and end of line.
         command=data.strip()[1:].strip().replace("\r\n","")
 
         setorget=command[0:3]
+
+        time = Time.now() #(datetime.datetime.utcnow().isoformat(), format='isot')
+        status["gps.time"] = time.unix                
 
         if setorget=="set":
                 return setter(command[4:])
